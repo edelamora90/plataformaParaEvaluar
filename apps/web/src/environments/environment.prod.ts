@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.exam.emcode.tech/api',
+  apiUrl: 'https://evaluacion.emcode.tech/api',
 };
