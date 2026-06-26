@@ -61,7 +61,7 @@ async function main() {
         "Evaluación integral sobre fundamentos de Inteligencia Artificial, agentes inteligentes, búsqueda, Machine Learning, redes neuronales, ética, sesgos, IA generativa y diseño de soluciones aplicadas.",
       status: ExamStatus.PUBLISHED,
       accessCode: "IA20",
-      durationMinutes: 120,
+      durationMinutes: 50,
       oneAttemptOnly: true,
       shuffleQuestions: false,
       shuffleOptions: false,
@@ -563,7 +563,7 @@ async function main() {
   console.log("🎉 Examen de 20 preguntas creado correctamente");
   console.log("Título:", exam.title);
   console.log("Código de acceso: IA20");
-  console.log("Duración: 120 minutos");
+  console.log("Duración: 50 minutos");
 }
 
 main()
