@@ -811,6 +811,121 @@ export class TeacherService {
       );
     };
 
+
+    const formatStudentAnswer = (answerJson: unknown) => {
+      if (answerJson === null || answerJson === undefined || answerJson === '') {
+        return 'No disponible';
+      }
+
+      if (typeof answerJson === 'string') {
+        return answerJson.trim() || 'No disponible';
+      }
+
+      if (typeof answerJson === 'number' || typeof answerJson === 'boolean') {
+        return String(answerJson);
+      }
+
+      if (Array.isArray(answerJson)) {
+        if (answerJson.length === 0) return 'No disponible';
+
+        return answerJson
+          .map((item, index) => {
+            if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
+              return `${index + 1}. ${String(item)}`;
+            }
+
+            return `${index + 1}. ${JSON.stringify(item)}`;
+          })
+          .join('\n');
+      }
+
+      if (typeof answerJson === 'object') {
+        const value = answerJson as Record<string, any>;
+
+        const directText =
+          value.text ??
+          value.answer ??
+          value.response ??
+          value.value ??
+          value.selected ??
+          value.selectedValue ??
+          value.studentAnswer;
+
+        if (
+          directText !== null &&
+          directText !== undefined &&
+          directText !== '' &&
+          typeof directText !== 'object'
+        ) {
+          return String(directText);
+        }
+
+        const listValue =
+          value.values ??
+          value.selectedValues ??
+          value.selectedOptions ??
+          value.options ??
+          value.order ??
+          value.orderedValues;
+
+        if (Array.isArray(listValue)) {
+          if (listValue.length === 0) return 'No disponible';
+
+          return listValue
+            .map((item, index) => `${index + 1}. ${String(item)}`)
+            .join('\n');
+        }
+
+        const matchingValue =
+          value.matches ??
+          value.matching ??
+          value.pairs ??
+          value.relations;
+
+        if (matchingValue && typeof matchingValue === 'object') {
+          if (Array.isArray(matchingValue)) {
+            return matchingValue
+              .map((item: any, index: number) => {
+                if (typeof item === 'object') {
+                  const left = item.left ?? item.source ?? item.term ?? item.question ?? item.from ?? '';
+                  const right = item.right ?? item.target ?? item.definition ?? item.answer ?? item.to ?? '';
+                  return `${index + 1}. ${left} → ${right}`;
+                }
+
+                return `${index + 1}. ${String(item)}`;
+              })
+              .join('\n');
+          }
+
+          return Object.entries(matchingValue)
+            .map(([key, val]) => `${key} → ${String(val)}`)
+            .join('\n');
+        }
+
+        const entries = Object.entries(value);
+
+        if (entries.length === 0) {
+          return 'No disponible';
+        }
+
+        return entries
+          .map(([key, val]) => {
+            if (Array.isArray(val)) {
+              return `${key}: ${val.join(', ')}`;
+            }
+
+            if (val && typeof val === 'object') {
+              return `${key}: ${JSON.stringify(val)}`;
+            }
+
+            return `${key}: ${String(val)}`;
+          })
+          .join('\n');
+      }
+
+      return safeText(answerJson);
+    };
+
     const formatDate = (value: unknown) => {
       if (!value) return 'No disponible';
 
@@ -920,7 +1035,7 @@ export class TeacherService {
       doc.moveDown(0.35);
       doc.fontSize(10).font('Helvetica-Bold').text('Respuesta del alumno:');
       doc.fontSize(9).font('Helvetica').text(
-        safeText(answer.answerJson),
+        formatStudentAnswer(answer.answerJson),
         { align: 'left' }
       );
 
