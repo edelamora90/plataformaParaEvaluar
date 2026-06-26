@@ -1,0 +1,79 @@
+<main class="page">
+  <a routerLink="/student/dashboard">← Volver al panel</a>
+
+  @if (loading()) {
+    <p>Cargando resultado...</p>
+  } @else if (result()) {
+    <header class="hero">
+      <p class="eyebrow">Resultado</p>
+      <h1>{{ result()?.exam.title }}</h1>
+
+      <div class="score">
+        <strong>{{ result()?.percentage | number:'1.0-1' }}%</strong>
+        <span>{{ result()?.totalScore }} / {{ result()?.maxScore }} puntos</span>
+      </div>
+
+      <p class="feedback">{{ result()?.generalFeedback }}</p>
+    </header>
+
+    <section class="answers">
+      <h2>Retroalimentación por pregunta</h2>
+
+      @for (answer of result()?.answers; track answer.questionId; let index = $index) {
+        <article class="answer-card">
+          <div class="answer-head">
+            <div>
+              <span class="badge" [class.ai]="answer.evaluatedBy === 'AI'">
+                {{ answer.evaluatedBy }}
+              </span>
+              <h3>{{ index + 1 }}. {{ answer.feedback }}</h3>
+            </div>
+
+            <strong>{{ answer.score }} / {{ answer.maxScore }}</strong>
+          </div>
+
+          @if (answer.aiEvaluation) {
+            <div class="ai-box">
+              @if (answer.aiEvaluation.strengths?.length) {
+                <div>
+                  <h4>Fortalezas</h4>
+                  <ul>
+                    @for (item of answer.aiEvaluation.strengths; track item) {
+                      <li>{{ item }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (answer.aiEvaluation.improvements?.length) {
+                <div>
+                  <h4>Áreas de mejora</h4>
+                  <ul>
+                    @for (item of answer.aiEvaluation.improvements; track item) {
+                      <li>{{ item }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (answer.aiEvaluation.detectedConcepts?.length) {
+                <div>
+                  <h4>Conceptos detectados</h4>
+                  <div class="chips">
+                    @for (item of answer.aiEvaluation.detectedConcepts; track item) {
+                      <span>{{ item }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </article>
+      }
+    </section>
+  }
+
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
+  }
+</main>

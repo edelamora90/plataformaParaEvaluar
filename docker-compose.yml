@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clase_ia_exam_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clase_ia_exam
+      POSTGRES_USER: clase_ia_user
+      POSTGRES_PASSWORD: clase_ia_password
+    ports:
+      - "5436:5432"
+    volumes:
+      - clase_ia_exam_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  clase_ia_exam_postgres_data:

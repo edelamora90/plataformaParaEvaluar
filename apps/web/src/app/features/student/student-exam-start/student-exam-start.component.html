@@ -1,0 +1,28 @@
+<main class="page">
+  <section class="card">
+    <a routerLink="/student/dashboard">← Volver</a>
+
+    <p class="eyebrow">Inicio de evaluación</p>
+    <h1>Confirmar acceso</h1>
+
+    <p class="muted">
+      Para iniciar la evaluación ingresa el código proporcionado por el docente.
+      Una vez iniciado, se registrará tu intento.
+    </p>
+
+    <label>
+      Código de evaluación
+      <input [(ngModel)]="accessCode" placeholder="Código" />
+    </label>
+
+    @if (error()) {
+      <div class="error">{{ error() }}</div>
+    }
+
+    <div class="actions">
+      <button type="button" (click)="start()" [disabled]="loading()">
+        {{ loading() ? 'Iniciando...' : 'Iniciar evaluación' }}
+      </button>
+    </div>
+  </section>
+</main>

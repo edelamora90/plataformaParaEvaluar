@@ -1,0 +1,73 @@
+<main class="page">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Alumno</p>
+      <h1>Hola, {{ auth.user()?.displayName }}</h1>
+      <p class="muted">
+        No. de control: {{ auth.user()?.controlNumber }} · Grupo:
+        {{ auth.user()?.group || 'Sin grupo' }}
+      </p>
+    </div>
+
+    <button class="ghost" (click)="logout()">Salir</button>
+  </header>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Evaluaciones disponibles</h2>
+        <p>Revisa tus exámenes activos y el estado de tus intentos.</p>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <p class="muted">Cargando evaluaciones...</p>
+    } @else if (exams().length === 0) {
+      <p class="muted">No tienes evaluaciones disponibles.</p>
+    } @else {
+      <div class="exam-grid">
+        @for (exam of exams(); track exam.id) {
+          <article class="exam-card">
+            <div class="status" [class.locked]="!exam.canStart">
+              {{ exam.canStart ? 'Disponible' : 'Intento registrado' }}
+            </div>
+
+            <h3>{{ exam.title }}</h3>
+            <p>{{ exam.description }}</p>
+
+            <div class="meta">
+              <span>{{ exam.questionCount }} preguntas</span>
+              <span>{{ exam.maxScore }} puntos</span>
+              <span>{{ exam.durationMinutes || 'Sin límite' }} min</span>
+            </div>
+
+            @if (exam.attempt) {
+              <div class="attempt">
+                <strong>Estado:</strong> {{ exam.attempt.status }}
+                @if (exam.attempt.status === 'EVALUATED') {
+                  <span> · Calificación: {{ exam.attempt.percentage | number:'1.0-1' }}%</span>
+                }
+              </div>
+            }
+
+            @if (exam.canStart) {
+              <a class="exam-action" [routerLink]="['/student/exams', exam.id, 'start']">
+                Iniciar evaluación
+              </a>
+            } @else if (exam.attempt?.status === 'EVALUATED') {
+              <a class="exam-action secondary" [routerLink]="['/student/results', exam.attempt?.id]">
+                Ver resultado
+              </a>
+            } @else if (exam.attempt?.id) {
+              <a class="exam-action secondary" [routerLink]="['/student/attempts', exam.attempt?.id]">
+                Continuar intento
+              </a>
+            } @else {
+              <button disabled>No disponible</button>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</main>

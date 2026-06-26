@@ -1,0 +1,159 @@
+<main class="page">
+  @if (loading()) {
+    <p>Cargando evaluación...</p>
+  } @else if (attempt()) {
+    <header class="topbar">
+      <div>
+        <a routerLink="/student/dashboard">← Volver</a>
+        <p class="eyebrow">Evaluación</p>
+        <h1>{{ attempt()?.exam.title }}</h1>
+        <p class="muted">
+          {{ attempt()?.exam.durationMinutes || 'Sin límite' }} minutos ·
+          {{ attempt()?.exam.questions.length }} preguntas ·
+          {{ attempt()?.maxScore }} puntos
+        </p>
+      </div>
+
+      <button type="button" (click)="submit()" [disabled]="submitting()">
+        {{ submitting() ? 'Enviando...' : 'Enviar evaluación' }}
+      </button>
+    </header>
+
+    @if (error()) {
+      <div class="error">{{ error() }}</div>
+    }
+
+    <section class="questions">
+      @for (question of attempt()?.exam.questions; track question.id; let index = $index) {
+        <article class="question-card">
+          <div class="question-head">
+            <div>
+              <span class="badge">{{ question.type }}</span>
+              <h2>{{ index + 1 }}. {{ question.prompt }}</h2>
+
+              @if (question.instructions) {
+                <p class="muted">{{ question.instructions }}</p>
+              }
+            </div>
+
+            <strong>{{ question.points }} pts</strong>
+          </div>
+
+          @if (question.type === 'MULTIPLE_CHOICE') {
+            <div class="options">
+              @for (option of question.options?.options; track option.id) {
+                <label class="option">
+                  <input
+                    type="radio"
+                    [name]="question.id"
+                    [value]="option.id"
+                    [(ngModel)]="answers[question.id].value"
+                  />
+                  <span>{{ option.text }}</span>
+                </label>
+              }
+            </div>
+          }
+
+          @if (question.type === 'TRUE_FALSE') {
+            <div class="options">
+              <label class="option">
+                <input
+                  type="radio"
+                  [name]="question.id"
+                  [checked]="answers[question.id].value === true"
+                  (change)="setBooleanAnswer(question.id, true)"
+                />
+                <span>Verdadero</span>
+              </label>
+
+              <label class="option">
+                <input
+                  type="radio"
+                  [name]="question.id"
+                  [checked]="answers[question.id].value === false"
+                  (change)="setBooleanAnswer(question.id, false)"
+                />
+                <span>Falso</span>
+              </label>
+            </div>
+          }
+
+          @if (question.type === 'MULTIPLE_SELECT') {
+            <div class="options">
+              @for (option of question.options?.options; track option.id) {
+                <label class="option">
+                  <input
+                    type="checkbox"
+                    [checked]="answers[question.id].values.includes(option.id)"
+                    (change)="toggleMultiple(question.id, option.id, $any($event.target).checked)"
+                  />
+                  <span>{{ option.text }}</span>
+                </label>
+              }
+            </div>
+          }
+
+          @if (question.type === 'MATCHING') {
+            <div class="matching">
+              @for (left of question.options?.left; track left.id) {
+                <label>
+                  <span>{{ left.text }}</span>
+                  <select [(ngModel)]="answers[question.id].pairs[left.id]">
+                    <option value="">Selecciona relación</option>
+
+                    @for (right of question.options?.right; track right.id) {
+                      <option [value]="right.id">{{ right.text }}</option>
+                    }
+                  </select>
+                </label>
+              }
+            </div>
+          }
+
+          @if (question.type === 'ORDERING') {
+            <div class="ordering">
+              @for (optionId of answers[question.id].order; track optionId; let orderIndex = $index) {
+                <div class="order-item">
+                  <span>{{ orderIndex + 1 }}. {{ optionText(question, optionId) }}</span>
+
+                  <div class="order-actions">
+                    <button
+                      type="button"
+                      class="mini"
+                      (click)="moveOrder(question.id, orderIndex, 'up')"
+                    >
+                      ↑
+                    </button>
+
+                    <button
+                      type="button"
+                      class="mini"
+                      (click)="moveOrder(question.id, orderIndex, 'down')"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          @if (question.type === 'OPEN_TEXT' || question.type === 'CASE_ANALYSIS') {
+            <textarea
+              [(ngModel)]="answers[question.id].text"
+              rows="7"
+              placeholder="Escribe tu respuesta..."
+            ></textarea>
+          }
+        </article>
+      }
+    </section>
+
+    <footer class="submit-footer">
+      <button type="button" (click)="submit()" [disabled]="submitting()">
+        {{ submitting() ? 'Enviando...' : 'Enviar evaluación' }}
+      </button>
+    </footer>
+  }
+</main>

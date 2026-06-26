@@ -1,0 +1,120 @@
+<main class="page">
+  <a routerLink="/teacher/dashboard">← Volver</a>
+
+  @if (summary()) {
+    <header>
+      <p class="eyebrow">Evaluación</p>
+      <h1>{{ summary()?.exam.title }}</h1>
+      <p>{{ summary()?.exam.description }}</p>
+    </header>
+
+    <section class="cards">
+      <div class="card">
+        <span>Alumnos</span>
+        <strong>{{ summary()?.totals.studentsRegistered }}</strong>
+      </div>
+      <div class="card">
+        <span>Intentos</span>
+        <strong>{{ summary()?.totals.attemptsStarted }}</strong>
+      </div>
+      <div class="card">
+        <span>Evaluados</span>
+        <strong>{{ summary()?.totals.attemptsEvaluated }}</strong>
+      </div>
+      <div class="card">
+        <span>Promedio</span>
+        <strong>{{ summary()?.performance.average | number:'1.0-1' }}%</strong>
+      </div>
+    </section>
+  }
+
+  @if (actionMessage()) {
+    <div class="notice success">{{ actionMessage() }}</div>
+  }
+
+  @if (actionError()) {
+    <div class="notice error">{{ actionError() }}</div>
+  }
+
+  @if (analytics()) {
+    <section class="panel">
+      <h2>Desempeño por sección</h2>
+
+      <div class="bars">
+        @for (item of analytics()?.bySection; track item.key) {
+          <div class="bar-row">
+            <span>{{ item.key }}</span>
+            <div class="bar">
+              <div [style.width.%]="item.percentage"></div>
+            </div>
+            <strong>{{ item.percentage | number:'1.0-1' }}%</strong>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Conceptos detectados por IA</h2>
+
+      <div class="chips">
+        @for (item of analytics()?.aiConcepts.detectedConcepts; track item.concept) {
+          <span>{{ item.concept }} · {{ item.count }}</span>
+        }
+      </div>
+    </section>
+  }
+
+  <section class="panel">
+    <h2>Intentos</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>No. control</th>
+          <th>Alumno</th>
+          <th>Estado</th>
+          <th>Calificación</th>
+          <th>Enviado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (attempt of attempts(); track attempt.id) {
+          <tr>
+            <td>{{ attempt.controlNumber }}</td>
+            <td>{{ attempt.fullName }}</td>
+            <td>
+              <span class="badge" [class.ok]="attempt.status === 'EVALUATED'">
+                {{ attempt.status }}
+              </span>
+            </td>
+            <td>{{ attempt.percentage | number:'1.0-1' }}%</td>
+            <td>{{ attempt.submittedAt || 'Pendiente' }}</td>
+            <td>
+              <div class="actions">
+                <button
+                  class="small primary"
+                  type="button"
+                  [disabled]="busyAttemptId() === attempt.id"
+                  (click)="authorizeRetry(attempt)"
+                >
+                  Dar oportunidad
+                </button>
+
+                <button
+                  class="small danger"
+                  type="button"
+                  [disabled]="busyAttemptId() === attempt.id"
+                  (click)="resetAttempt(attempt)"
+                >
+                  Resetear
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+</main>

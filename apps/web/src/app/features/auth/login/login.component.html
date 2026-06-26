@@ -1,0 +1,46 @@
+<main class="login-page">
+  <section class="login-card">
+    <div class="brand">
+      <div class="brand-icon">IA</div>
+      <div>
+        <p class="eyebrow">Clase IA Verano</p>
+        <h1>Plataforma de Evaluación</h1>
+      </div>
+    </div>
+
+    <p class="description">
+      Ingresa con tu número de control si eres alumno, o con tu correo si eres docente.
+    </p>
+
+    <form (ngSubmit)="submit()">
+      <label>
+        Usuario
+        <input
+          name="identifier"
+          [(ngModel)]="identifier"
+          placeholder="No. de control o correo"
+          autocomplete="username"
+        />
+      </label>
+
+      <label>
+        Contraseña
+        <input
+          name="password"
+          [(ngModel)]="password"
+          type="password"
+          placeholder="Contraseña"
+          autocomplete="current-password"
+        />
+      </label>
+
+      @if (error()) {
+        <div class="error">{{ error() }}</div>
+      }
+
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Entrando...' : 'Entrar' }}
+      </button>
+    </form>
+  </section>
+</main>
