@@ -1,7 +1,8 @@
-import { Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Res, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { TeacherService } from './teacher.service';
@@ -73,4 +74,21 @@ export class TeacherController {
   getAttemptDetail(@Param('attemptId') attemptId: string) {
     return this.teacherService.getAttemptDetail(attemptId);
   }
+
+  @Get('attempts/:attemptId/pdf')
+  async downloadAttemptPdf(
+    @Param('attemptId') attemptId: string,
+    @Res() res: Response
+  ) {
+    const pdfBuffer = await this.teacherService.generateAttemptPdf(attemptId);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="evidencia-examen-${attemptId}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
 }

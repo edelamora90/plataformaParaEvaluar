@@ -93,7 +93,16 @@
             <td>{{ attempt.submittedAt || 'Pendiente' }}</td>
             <td>
               <div class="actions">
-                <button
+                
+<button
+  type="button"
+  class="btn-secondary"
+  (click)="downloadAttemptPdf(attempt.id)"
+>
+  Descargar PDF
+</button>
+
+<button
                   class="small primary"
                   type="button"
                   [disabled]="busyAttemptId() === attempt.id"

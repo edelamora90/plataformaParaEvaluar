@@ -100,4 +100,9 @@ export class ApiService {
       {}
     );
   }
+
+  getTeacherAttemptPdfUrl(attemptId: string) {
+    return `${this.apiUrl}/teacher/attempts/${attemptId}/pdf`;
+  }
+
 }

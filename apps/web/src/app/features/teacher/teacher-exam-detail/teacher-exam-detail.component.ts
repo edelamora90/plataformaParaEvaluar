@@ -90,4 +90,40 @@ export class TeacherExamDetailComponent implements OnInit {
       },
     });
   }
+
+  downloadAttemptPdf(attemptId: string) {
+    const token = localStorage.getItem('accessToken');
+
+    if (!token) {
+      this.actionError.set('No hay sesión activa.');
+      return;
+    }
+
+    fetch(this.api.getTeacherAttemptPdfUrl(attemptId), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('No se pudo descargar el PDF.');
+        }
+
+        return response.blob();
+      })
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = `evidencia-examen-${attemptId}.pdf`;
+        link.click();
+
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(() => {
+        this.actionError.set('No se pudo descargar el PDF del intento.');
+      });
+  }
+
 }

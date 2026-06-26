@@ -1,3 +1,4 @@
+import PDFDocument from 'pdfkit';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AttemptStatus, QuestionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -746,4 +747,174 @@ export class TeacherService {
 
     return values.reduce((sum, value) => sum + value, 0) / values.length;
   }
+
+  async generateAttemptPdf(attemptId: string): Promise<Buffer> {
+    const attempt = await this.getAttemptDetail(attemptId);
+
+    const chunks: Buffer[] = [];
+    const doc = new PDFDocument({
+      size: 'LETTER',
+      margin: 50,
+      info: {
+        Title: `Evidencia de examen - ${attempt.student?.fullName || 'Alumno'}`,
+        Author: 'Plataforma de Evaluación IA',
+        Subject: attempt.exam?.title || 'Examen',
+      },
+    });
+
+    doc.on('data', (chunk) => chunks.push(chunk));
+    const finished = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+
+    const safeText = (value: unknown) => {
+      if (value === null || value === undefined) return 'No disponible';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+      return JSON.stringify(value, null, 2);
+    };
+
+    const formatDate = (value: unknown) => {
+      if (!value) return 'No disponible';
+      try {
+        return new Date(value as string).toLocaleString('es-MX', {
+          timeZone: 'America/Mexico_City',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch {
+        return safeText(value);
+      }
+    };
+
+    const addDivider = () => {
+      doc.moveDown(0.7);
+      doc.moveTo(50, doc.y).lineTo(562, doc.y).strokeColor('#d1d5db').stroke();
+      doc.strokeColor('#000000');
+      doc.moveDown(0.7);
+    };
+
+    const addPageIfNeeded = (neededHeight = 100) => {
+      if (doc.y + neededHeight > 720) {
+        doc.addPage();
+      }
+    };
+
+    doc.fontSize(10).fillColor('#2563eb').font('Helvetica-Bold').text('EVIDENCIA DE EVALUACION', {
+      characterSpacing: 1.2,
+    });
+
+    doc.moveDown(0.4);
+    doc.fontSize(20).fillColor('#111827').font('Helvetica-Bold').text(
+      safeText(attempt.exam?.title || 'Examen')
+    );
+
+    doc.moveDown(0.5);
+    doc.fontSize(11).fillColor('#374151').font('Helvetica').text(
+      'Documento generado automaticamente por la Plataforma de Evaluacion IA.'
+    );
+
+    addDivider();
+
+    doc.fontSize(14).fillColor('#111827').font('Helvetica-Bold').text('Datos del alumno');
+    doc.moveDown(0.4);
+
+    doc.fontSize(10).fillColor('#111827').font('Helvetica');
+    doc.text(`Alumno: ${safeText(attempt.student?.fullName)}`);
+    doc.text(`No. de control: ${safeText(attempt.student?.controlNumber)}`);
+    doc.text(`Grupo: ${safeText(attempt.student?.group)}`);
+
+    doc.moveDown(0.8);
+    doc.fontSize(14).font('Helvetica-Bold').text('Resultado');
+    doc.moveDown(0.4);
+
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`Estado: ${safeText(attempt.status)}`);
+    doc.text(`Intento: ${safeText(attempt.attemptNumber)}`);
+    doc.text(`Inicio: ${formatDate(attempt.startedAt)}`);
+    doc.text(`Envio: ${formatDate(attempt.submittedAt)}`);
+    doc.text(`Evaluacion: ${formatDate(attempt.submittedAt)}`);
+    doc.text(`Puntaje: ${safeText(attempt.totalScore)} / ${safeText(attempt.maxScore)}`);
+    doc.text(`Porcentaje: ${safeText(attempt.percentage)}%`);
+
+    doc.moveDown(0.8);
+    doc.fontSize(14).font('Helvetica-Bold').text('Retroalimentacion general');
+    doc.moveDown(0.4);
+    doc.fontSize(10).font('Helvetica').text(
+      safeText(attempt.generalFeedback),
+      { align: 'left' }
+    );
+
+    addDivider();
+
+    doc.fontSize(16).fillColor('#111827').font('Helvetica-Bold').text('Detalle por pregunta');
+    doc.moveDown(0.5);
+
+    const answers = attempt.answers || [];
+
+    answers.forEach((answer: any, index: number) => {
+      addPageIfNeeded(170);
+
+      const question = answer.question || {};
+
+      doc.fontSize(12).fillColor('#111827').font('Helvetica-Bold').text(
+        `${index + 1}. ${safeText(question.title || question.prompt || 'Pregunta')}`
+      );
+
+      doc.moveDown(0.25);
+      doc.fontSize(9).fillColor('#4b5563').font('Helvetica');
+      doc.text(`Tipo: ${safeText(question.type)}`);
+      doc.text(`Tema: ${safeText(question.topic)}`);
+      doc.text(`Seccion: ${safeText(question.section)}`);
+      doc.text(`Evaluado por: ${safeText(answer.evaluatedBy)}`);
+      doc.text(`Puntaje: ${safeText(answer.score)} / ${safeText(question.points)}`);
+
+      doc.moveDown(0.35);
+      doc.fontSize(10).fillColor('#111827').font('Helvetica-Bold').text('Enunciado:');
+      doc.fontSize(10).font('Helvetica').text(
+        safeText(question.prompt),
+        { align: 'left' }
+      );
+
+      doc.moveDown(0.35);
+      doc.fontSize(10).font('Helvetica-Bold').text('Respuesta del alumno:');
+      doc.fontSize(9).font('Helvetica').text(
+        safeText(answer.answerJson),
+        { align: 'left' }
+      );
+
+      doc.moveDown(0.35);
+      doc.fontSize(10).font('Helvetica-Bold').text('Retroalimentacion:');
+      doc.fontSize(9).font('Helvetica').text(
+        safeText(answer.feedback),
+        { align: 'left' }
+      );
+
+      if (answer.aiEvaluationJson) {
+        doc.moveDown(0.35);
+        doc.fontSize(10).font('Helvetica-Bold').text('Evaluacion IA / rubrica:');
+        doc.fontSize(8).font('Helvetica').text(
+          safeText(answer.aiEvaluationJson),
+          { align: 'left' }
+        );
+      }
+
+      addDivider();
+    });
+
+    doc.fontSize(8).fillColor('#6b7280').font('Helvetica').text(
+      `Generado el ${formatDate(new Date().toISOString())}`,
+      50,
+      735,
+      { align: 'center', width: 512 }
+    );
+
+    doc.end();
+
+    return finished;
+  }
+
 }
