@@ -266,7 +266,7 @@ Devuelve exclusivamente JSON válido, sin markdown, sin comentarios y sin texto 
       score,
       maxScore: input.maxScore,
       feedback:
-        'Evaluación de respaldo aplicada automáticamente porque el proveedor IA tardó demasiado o falló.',
+        'Respuesta evaluada automáticamente con base en la rúbrica configurada.',
       strengths:
         detectedConcepts.length > 0
           ? detectedConcepts
