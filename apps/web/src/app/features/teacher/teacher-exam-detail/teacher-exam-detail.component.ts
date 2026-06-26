@@ -92,10 +92,10 @@ export class TeacherExamDetailComponent implements OnInit {
   }
 
   downloadAttemptPdf(attemptId: string) {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('clase_ia_access_token');
 
     if (!token) {
-      this.actionError.set('No hay sesión activa.');
+      this.actionError.set('No hay sesión activa. Cierra sesión e inicia nuevamente.');
       return;
     }
 
