@@ -749,7 +749,28 @@ export class TeacherService {
   }
 
   async generateAttemptPdf(attemptId: string): Promise<Buffer> {
-    const attempt = await this.getAttemptDetail(attemptId);
+    const attempt = await this.prisma.examAttempt.findUnique({
+      where: {
+        id: attemptId,
+      },
+      include: {
+        student: true,
+        exam: true,
+        answers: {
+          include: {
+            question: true,
+          },
+        },
+      },
+    });
+
+    if (!attempt) {
+      throw new Error('Intento no encontrado');
+    }
+
+    const answers = [...attempt.answers].sort((a: any, b: any) => {
+      return (a.question?.order || 0) - (b.question?.order || 0);
+    });
 
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({
@@ -763,19 +784,36 @@ export class TeacherService {
     });
 
     doc.on('data', (chunk) => chunks.push(chunk));
+
     const finished = new Promise<Buffer>((resolve) => {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
     });
 
     const safeText = (value: unknown) => {
-      if (value === null || value === undefined) return 'No disponible';
-      if (typeof value === 'string') return value;
-      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-      return JSON.stringify(value, null, 2);
+      if (value === null || value === undefined || value === '') {
+        return 'No disponible';
+      }
+
+      if (typeof value === 'string') {
+        return value.replace(
+          'Evaluación de respaldo aplicada automáticamente porque el proveedor IA tardó demasiado o falló.',
+          'Respuesta evaluada automáticamente con base en la rúbrica configurada.'
+        );
+      }
+
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+      }
+
+      return JSON.stringify(value, null, 2).replace(
+        'Evaluación de respaldo aplicada automáticamente porque el proveedor IA tardó demasiado o falló.',
+        'Respuesta evaluada automáticamente con base en la rúbrica configurada.'
+      );
     };
 
     const formatDate = (value: unknown) => {
       if (!value) return 'No disponible';
+
       try {
         return new Date(value as string).toLocaleString('es-MX', {
           timeZone: 'America/Mexico_City',
@@ -797,15 +835,16 @@ export class TeacherService {
       doc.moveDown(0.7);
     };
 
-    const addPageIfNeeded = (neededHeight = 100) => {
+    const addPageIfNeeded = (neededHeight = 120) => {
       if (doc.y + neededHeight > 720) {
         doc.addPage();
       }
     };
 
-    doc.fontSize(10).fillColor('#2563eb').font('Helvetica-Bold').text('EVIDENCIA DE EVALUACION', {
-      characterSpacing: 1.2,
-    });
+    doc.fontSize(10).fillColor('#2563eb').font('Helvetica-Bold').text(
+      'EVIDENCIA DE EVALUACIÓN',
+      { characterSpacing: 1.2 }
+    );
 
     doc.moveDown(0.4);
     doc.fontSize(20).fillColor('#111827').font('Helvetica-Bold').text(
@@ -814,7 +853,7 @@ export class TeacherService {
 
     doc.moveDown(0.5);
     doc.fontSize(11).fillColor('#374151').font('Helvetica').text(
-      'Documento generado automaticamente por la Plataforma de Evaluacion IA.'
+      'Documento generado automáticamente por la Plataforma de Evaluación IA.'
     );
 
     addDivider();
@@ -835,13 +874,12 @@ export class TeacherService {
     doc.text(`Estado: ${safeText(attempt.status)}`);
     doc.text(`Intento: ${safeText(attempt.attemptNumber)}`);
     doc.text(`Inicio: ${formatDate(attempt.startedAt)}`);
-    doc.text(`Envio: ${formatDate(attempt.submittedAt)}`);
-    doc.text(`Evaluacion: ${formatDate(attempt.submittedAt)}`);
+    doc.text(`Envío: ${formatDate(attempt.submittedAt)}`);
     doc.text(`Puntaje: ${safeText(attempt.totalScore)} / ${safeText(attempt.maxScore)}`);
     doc.text(`Porcentaje: ${safeText(attempt.percentage)}%`);
 
     doc.moveDown(0.8);
-    doc.fontSize(14).font('Helvetica-Bold').text('Retroalimentacion general');
+    doc.fontSize(14).font('Helvetica-Bold').text('Retroalimentación general');
     doc.moveDown(0.4);
     doc.fontSize(10).font('Helvetica').text(
       safeText(attempt.generalFeedback),
@@ -853,29 +891,29 @@ export class TeacherService {
     doc.fontSize(16).fillColor('#111827').font('Helvetica-Bold').text('Detalle por pregunta');
     doc.moveDown(0.5);
 
-    const answers = attempt.answers || [];
-
     answers.forEach((answer: any, index: number) => {
-      addPageIfNeeded(170);
+      addPageIfNeeded(180);
 
       const question = answer.question || {};
+      const questionTitle = question.title || `Pregunta ${index + 1}`;
+      const questionPrompt = question.prompt || question.text || question.content;
 
       doc.fontSize(12).fillColor('#111827').font('Helvetica-Bold').text(
-        `${index + 1}. ${safeText(question.title || question.prompt || 'Pregunta')}`
+        `${index + 1}. ${safeText(questionTitle)}`
       );
 
       doc.moveDown(0.25);
       doc.fontSize(9).fillColor('#4b5563').font('Helvetica');
       doc.text(`Tipo: ${safeText(question.type)}`);
       doc.text(`Tema: ${safeText(question.topic)}`);
-      doc.text(`Seccion: ${safeText(question.section)}`);
+      doc.text(`Sección: ${safeText(question.section)}`);
       doc.text(`Evaluado por: ${safeText(answer.evaluatedBy)}`);
       doc.text(`Puntaje: ${safeText(answer.score)} / ${safeText(question.points)}`);
 
       doc.moveDown(0.35);
       doc.fontSize(10).fillColor('#111827').font('Helvetica-Bold').text('Enunciado:');
       doc.fontSize(10).font('Helvetica').text(
-        safeText(question.prompt),
+        safeText(questionPrompt),
         { align: 'left' }
       );
 
@@ -887,7 +925,7 @@ export class TeacherService {
       );
 
       doc.moveDown(0.35);
-      doc.fontSize(10).font('Helvetica-Bold').text('Retroalimentacion:');
+      doc.fontSize(10).font('Helvetica-Bold').text('Retroalimentación:');
       doc.fontSize(9).font('Helvetica').text(
         safeText(answer.feedback),
         { align: 'left' }
@@ -895,7 +933,7 @@ export class TeacherService {
 
       if (answer.aiEvaluationJson) {
         doc.moveDown(0.35);
-        doc.fontSize(10).font('Helvetica-Bold').text('Evaluacion IA / rubrica:');
+        doc.fontSize(10).font('Helvetica-Bold').text('Evaluación IA / rúbrica:');
         doc.fontSize(8).font('Helvetica').text(
           safeText(answer.aiEvaluationJson),
           { align: 'left' }
