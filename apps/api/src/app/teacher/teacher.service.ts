@@ -926,6 +926,59 @@ export class TeacherService {
       return safeText(answerJson);
     };
 
+
+    const getStudentAnswerPayload = (answer: any) => {
+      const directValue =
+        answer.answerJson ??
+        answer.responseJson ??
+        answer.valueJson ??
+        answer.studentAnswerJson ??
+        answer.submittedAnswerJson ??
+        answer.answer ??
+        answer.response ??
+        answer.value ??
+        answer.studentAnswer ??
+        answer.submittedAnswer ??
+        answer.selectedAnswer ??
+        answer.selectedOption ??
+        answer.selectedValue ??
+        answer.text ??
+        answer.openText ??
+        answer.content;
+
+      if (directValue !== null && directValue !== undefined && directValue !== '') {
+        return directValue;
+      }
+
+      const ignoredKeys = new Set([
+        'id',
+        'attemptId',
+        'questionId',
+        'question',
+        'score',
+        'feedback',
+        'evaluatedBy',
+        'aiEvaluationJson',
+        'createdAt',
+        'updatedAt',
+      ]);
+
+      const remaining: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(answer)) {
+        if (ignoredKeys.has(key)) continue;
+        if (value === null || value === undefined || value === '') continue;
+
+        remaining[key] = value;
+      }
+
+      if (Object.keys(remaining).length > 0) {
+        return remaining;
+      }
+
+      return null;
+    };
+
     const formatDate = (value: unknown) => {
       if (!value) return 'No disponible';
 
@@ -1035,7 +1088,7 @@ export class TeacherService {
       doc.moveDown(0.35);
       doc.fontSize(10).font('Helvetica-Bold').text('Respuesta del alumno:');
       doc.fontSize(9).font('Helvetica').text(
-        formatStudentAnswer(answer.answerJson),
+        formatStudentAnswer(getStudentAnswerPayload(answer)),
         { align: 'left' }
       );
 
